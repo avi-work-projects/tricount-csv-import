@@ -41,16 +41,27 @@ Any deviation triggers Tricount's generic error: *"No se puede importar el CSV. 
 
 4. In the Tricount mobile app: **Add a Tricount → Import from Splitwise → pick the CSV → confirm**.
 
-## Asymmetric splits
+## Supported expense types
 
-Each expense's `participants` is a subset of `PEOPLE`. The cost is divided equally among participants only. Use this for cases like:
-- Some people skipped an activity
-- Someone paid for one specific person's airfare
-- Different subsets of the group at different stages of a trip
+Every kind of split that Splitwise's CSV format can express is supported. The script accepts two input forms — pick whichever is shorter for each expense:
+
+| Case | Form | Example |
+|---|---|---|
+| 1 payer · equal split | **compact** | `"payer": "Alice", "participants": ["Alice","Bob","Charlie"]` |
+| 1 payer · equal split among a subset | **compact** | `"payer": "Alice", "participants": ["Alice","Charlie"]` (Bob skipped) |
+| 1 payer · single beneficiary | **compact** | `"payer": "Alice", "participants": ["Bob"]` (Alice covered Bob) |
+| **Multiple payers** | **general** | `"paid_by": {"Alice": "60", "Bob": "40"}, "owed_by": {...}` |
+| **Unequal split** (exact amounts) | **general** | `"paid_by": {"Alice": "78"}, "owed_by": {"Alice": "30","Bob":"20","Charlie":"20","Dana":"8"}` |
+| Percentage / shares split | **general** | Same as unequal — convert percentages or ratios into exact amounts |
+| **Vendor refund** (negative cost) | either | `"cost": "-30.00"` — distribute among recipients |
+| **Multi-currency** within one group | either | Add `"currency": "USD"` to override the default for that row |
+| **Settlement / cash transfer** | `SETTLEMENTS` list | `{"payer": "Bob", "recipient": "Alice", "amount": "50.00"}` → CSV row with category `Pago` |
+
+The compact form expands automatically to the general form (1 payer covers full cost, equal split among participants). For everything else, use the general form: `paid_by` is a dict of who paid how much, `owed_by` is a dict of who consumed how much. Both must sum to `cost` (the script validates this).
 
 ## Settlements
 
-Prior cash transfers (e.g. one person paid the organizer back two weeks before) appear in the CSV with category `Pago` and a description in the form `"X pagó Y"`. Tricount recognizes these as settlements rather than expenses.
+Prior cash transfers (e.g. one person paid the organizer back before the trip) go in the `SETTLEMENTS` list. They appear in the CSV with category `Pago` and a description in the form `"X pagó Y"` — Tricount recognizes these as payments rather than expenses.
 
 ## Format details
 
